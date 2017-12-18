@@ -1,0 +1,20 @@
+The program sound_effects_editor is distributed
+using the Autotools package.  See the INSTALL file
+for details.  The package uses AM_MAINTAINER_MODE,
+so if you update the package to use a later
+version of the Autotools software, you will need
+to use --enable-maintainer-mode when running
+the configure script.
+
+The program sound_effects_editor was written by 
+John Sauter starting in late 2017 in support of
+the ShowControl project.
+
+John Sauter's contact information is as follows:
+
+John Sauter
+System Eyes Computer Store
+20A Northwest Blvd.  Ste 345
+Nashua, NH  03063-4066
+telephone: (603) 424-1188
+e-mail: John_Sauter@systemeyescomputerstore.com

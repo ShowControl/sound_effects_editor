@@ -1,0 +1,45 @@
+.TH sound_effects_editor 1 "December 18, 2017"
+.SH NAME
+sound_effects_editor --- edit sound effects for sound_effects_player
+.SH SYNTAX
+sound_effects_editor [<project_file>] 
+.SH AVAILABILITY
+The program should work on any computer system which
+provides Python 3 or later, but it has only been tested
+on GNU/Linux.
+.SH DESCRIPTION
+When creating sound effects for a live stage play, you
+can edit the ShowControl XML files directly, but it is
+more convenient to use this sound effects editor to
+create and modify the files.
+.P
+The optional project file is the ShowControl XML file for
+the project.  If this is omitted the last project referenced
+by any ShowControl component is used.
+.SH OPTIONS
+.IP --help
+Prints a brief description of the program and how to invoke it.
+.IP --version
+Prints the version number of the program
+.SH EXAMPLES
+.IP "sound_effects_editor The_Music_Man_project.xml"
+Extract the sound effects for The Music Man from the project
+and allow them to be edited interactively.
+.SH NOTES
+.SH MESSAGES and EXIT CALLS
+.SH AUTHOR
+John Sauter, version 0.1, December 18, 2017
+.SH HISTORY
+.SH RESOURCES
+The program requires python version 3 or later to run.
+.SH FILES
+sound_effects_editor reads the configuration, project and equipment
+ShowControl XML files.  It writes the configuration and equipment
+files.
+.SH BUGS
+None known at the time of this writing.
+.SH CAVEATS
+None known at the time of this writing, but see the README file
+for details about how the program operates.
+.SH SEE ALSO
+

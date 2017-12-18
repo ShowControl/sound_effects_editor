@@ -1,0 +1,3 @@
+2017-12-18	Start with the sample GTK program for Python.  Add code
+		for reading the configuration and project XML files.
+		

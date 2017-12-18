@@ -1,0 +1,1 @@
+dist_bin_SCRIPTS = sound_effects_editor
