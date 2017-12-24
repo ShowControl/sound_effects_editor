@@ -173,6 +173,146 @@ class Application(Gtk.Application):
     def on_quit(self, action, param):
         self.quit()
 
+# Subroutine to parse a ShowControl sounds description.
+def parse_sounds (sounds_path, sounds_child, xml_parser):
+    for sound in sounds_child.iter ("sound"):
+        name = sound.find ("name")
+        print ("Sound name: " + name.text)
+    return
+
+# Subroutine to parse a ShowControl sound sequence description.
+def parse_sound_sequence (sound_sequence_path, sound_sequence_child,
+                          xml_parser):
+    for sound_sequence_item in sound_sequence_child.iter ("sequence_item"):
+        name = sound_sequence_item.find ("name")
+        print ("Sound sequence item name: " + name.text)
+    return
+
+# Subroutine to parse a ShowControl equipment description.
+# We extract the sound effects.
+def parse_equipment (equipment_path, equipment_child, xml_parser):
+    # Go through the programs, picking out the sound_effects program.
+    for program in equipment_child.iter ("program"):
+        if (program.get ("id") == "sound_effects"):
+            # Within the sound_effects program we care about the sounds
+            # and the sound sequence.
+            for sounds in program.iter ("sounds"):
+                parse_sounds (equipment_path, sounds, xml_parser)
+                # Handle information in a separate file.
+                sounds_href = sounds.get ("href")
+                if (sounds_href != None):
+                    # Read the sounds file.
+                    sounds_path = os.path.join (
+                        os.path.dirname (equipment_path),
+                        sounds_href)
+                    try:
+                        sounds_tree = etree.parse (sounds_path, xml_parser)
+                    except OSError as err:
+                        print (str(err))
+                        return
+                    # Validate the sounds file.
+                    sounds_root = sounds_tree.getroot()
+                    if (sounds_root.tag != "show_control"):
+                        print ("Sounds file is not a ShowControl XML file.")
+                        return
+                    child = sounds_root.find ("sounds")
+                    if (child.tag != "sounds"):
+                        print ("Sounds file is not a sounds file.")
+                        return
+                    version = child.find ("version")
+                    if (version.tag != "version"):
+                        print ("Version missing from sounds file.")
+                        return
+                    version_major, separator, version_minor = \
+                                                    version.text.rpartition(".")
+                    if (version_major != "1"):
+                        print ("Version wrong in sounds file: " + version.text)
+                        return
+                    
+                    # Parse the sounds.
+                    parse_sounds (sounds_path, child, xml_parser)
+
+            for sound_sequence in program.iter ("sound_sequence"):
+                parse_sound_sequence (equipment_path, sound_sequence,
+                                      xml_parser)
+                # Handle information in a separate file.
+                sound_sequence_href = sound_sequence.get ("href")
+                if (sound_sequence_href != None):
+                    # Read the sound sequence file.
+                    sound_sequence_path = os.path.join (
+                        os.path.dirname (equipment_path),
+                        sound_sequence_href)
+                    try:
+                        sound_sequence_tree = etree.parse (
+                            sound_sequence_path, xml_parser)
+                    except OSError as err:
+                        print (str(err))
+                        return
+                    # Validate the sound sequence file.
+                    sound_sequence_root = sound_sequence_tree.getroot()
+                    if (sound_sequence_root.tag != "show_control"):
+                        print ("Sound sequence file is not " +
+                               "a ShowControl XML file.")
+                        return
+                    child = sound_sequence_root.find ("sound_sequence")
+                    if (child.tag != "sound_sequence"):
+                        print ("Sound sequence file is not " +
+                               "a sound sequence file.")
+                        return
+                    version = child.find ("version")
+                    if (version.tag != "version"):
+                        print ("Version missing from sound sequence file.")
+                        return
+                    version_major, separator, version_minor = \
+                                                    version.text.rpartition(".")
+                    if (version_major != "1"):
+                        print ("Version wrong in sound sequence file: " +
+                               version.text)
+                        return
+                    
+                    # Parse the sound sequence.
+                    parse_sound_sequence (sound_sequence_path, child,
+                                          xml_parser)
+    return
+    
+# Subroutine to parse a ShowControl project description.
+def parse_project (project_path, project_child, xml_parser):    
+    # We only care about the equipment, but it may be both here
+    # and in separate files.
+    for equipment in project_child.iter ("equipment"):
+        parse_equipment (project_path, equipment, xml_parser)
+        # Handle any information in separate files.
+        equipment_href = equipment.get("href")
+        if (equipment_href != None):
+            equipment_path = os.path.join (os.path.dirname (project_path),
+                                           equipment_href)
+            try:
+                equipment_tree = etree.parse (equipment_path, xml_parser)
+            except OSError as err:
+                print (str(err))
+                return
+            # Validate the equipment file.
+            equipment_root = equipment_tree.getroot()
+            if (equipment_root.tag != "show_control"):
+                print ("Equipment file is not a ShowControl XML file.")
+                return
+            child = equipment_root.find ("equipment")
+            if (child.tag != "equipment"):
+                print ("Equipment file is not an equipment file.")
+                return
+            version = child.find ("version")
+            if (version.tag != "version"):
+                print ("Version missing from equipment file.")
+                return
+            version_major, separator, version_minor = \
+                                                    version.text.rpartition(".")
+            if (version_major != "1"):
+                print ("Version wrong in equipment file: " + version.text)
+                return
+            # Parse the equipment description.
+            parse_equipment (equipment_path, child, xml_parser)
+    return
+    
 if __name__ == "__main__":
 
     # Process the command line.
@@ -191,7 +331,7 @@ if __name__ == "__main__":
     cl_parser.add_argument ('input_file', nargs='?',
                             help='the ShowControl project file')
     cl_parser.add_argument ('--version', action='version',
-                            version='sound_effects_editor 0.1 2017-12-18',
+                            version='sound_effects_editor 0.1 2017-12-24',
                             help='print the version number and exit')
     arguments = cl_parser.parse_args ()
     arguments = vars(arguments)
@@ -223,19 +363,22 @@ if __name__ == "__main__":
                          '</configuration>\n' + \
                          '</show_control>\n'
         config_tree = etree.parse (StringIO(default_config), xml_parser)
-    
+
+    # Validate the configuration file.
     config_root = config_tree.getroot()
     if (config_root.tag != "show_control"):
-        print ("Not a ShowControl XML file.")
-    child = config_root.find("configuration");
+        print ("Configuration file is not a ShowControl XML file.")
+    child = config_root.find("configuration")
     if (child.tag != "configuration"):
-        print ("Not a configuration file")
+        print ("Configuration file is not a configuration file")
     version = child.find ("version")
     if (version.tag != "version"):
-        print ("Version missing")
+        print ("Version missing from configuration file")
     version_major, separator, version_minor = version.text.rpartition(".")
     if (version_major != "1"):
-        print ("Version wrong: ", version.text)
+        print ("Version wrong in confuguration file: " + version.text)
+
+    # Extract the default project file name from the configuration file.
     project = child.find ("project")
     project_file_name = project.find ("file").text
     if (project_file_name == None):
@@ -244,6 +387,9 @@ if __name__ == "__main__":
     if (project_folder_name == None):
         project_folder_name = ""
     project_path = os.path.join (project_folder_name, project_file_name)
+
+    # If the project file is specified on the command line, use it instead
+    # and update the configuration file.
     if (commandline_file_name != ""):
         project_path = os.path.abspath (commandline_file_name)
         project_folder_name = os.path.dirname (project_path)
@@ -253,16 +399,31 @@ if __name__ == "__main__":
         config_tree.write (config_path, encoding='UTF-8',
                            pretty_print=True, xml_declaration=True)
 
+    # Read the project file.
     try:
         project_tree = etree.parse (project_path, xml_parser)
     except OSError as err:
-        print (str(err));
-    else:
-        project_root = project_tree.getroot()
-        print ("top: ", project_root.tag)
-        for child in project_root:
-            print ("child: ", child.tag)
-            for grandchild in child:
-                print ("grandchild: ", grandchild.tag)
+        print (str(err))
+    # Validate the project file.
+    project_root = project_tree.getroot()
+    if (project_root.tag != "show_control"):
+        print ("Project file is not a ShowControl XML file.")
+
+    child = project_root.find ("project")
+    if (child.tag != "project"):
+        print ("Project file is not a project file.")
+
+    version = child.find ("version")
+    if (version.tag != "version"):
+        print ("Version missing from project file.")
+
+    version_major, separator, version_minor = version.text.rpartition(".")
+    if (version_major != "1"):
+        print ("Version wrong in project file: " + version.text)
+
+    # Parse the project.
+    parse_project (project_path, child, xml_parser)
+
+    # Run the application.
     app = Application()
     app.run(sys.argv)

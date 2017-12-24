@@ -2721,7 +2721,7 @@ $as_echo "$am_cv_python_pyexecdir" >&6; }
 # Checks for system services.
 
 
-ac_config_files="$ac_config_files Makefile man/Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile example_01/Makefile man/Makefile src/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -3445,6 +3445,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "example_01/Makefile") CONFIG_FILES="$CONFIG_FILES example_01/Makefile" ;;
     "man/Makefile") CONFIG_FILES="$CONFIG_FILES man/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 
