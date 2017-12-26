@@ -2720,7 +2720,6 @@ $as_echo "$am_cv_python_pyexecdir" >&6; }
 
 # Checks for system services.
 
-
 ac_config_files="$ac_config_files Makefile example_01/Makefile man/Makefile src/Makefile"
 
 cat >confcache <<\_ACEOF

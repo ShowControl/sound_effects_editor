@@ -39,50 +39,7 @@ from lxml import etree
 import argparse
 import pprint
 from io import StringIO, BytesIO
-
-# This would typically be its own file
-MENU_XML="""
-<?xml version="1.0" encoding="UTF-8"?>
-<interface>
-  <menu id="app-menu">
-    <section>
-      <attribute name="label" translatable="yes">Change label</attribute>
-      <item>
-        <attribute name="action">win.change_label</attribute>
-        <attribute name="target">String 1</attribute>
-        <attribute name="label" translatable="yes">String 1</attribute>
-      </item>
-      <item>
-        <attribute name="action">win.change_label</attribute>
-        <attribute name="target">String 2</attribute>
-        <attribute name="label" translatable="yes">String 2</attribute>
-      </item>
-      <item>
-        <attribute name="action">win.change_label</attribute>
-        <attribute name="target">String 3</attribute>
-        <attribute name="label" translatable="yes">String 3</attribute>
-      </item>
-    </section>
-    <section>
-      <item>
-        <attribute name="action">win.maximize</attribute>
-        <attribute name="label" translatable="yes">Maximize</attribute>
-      </item>
-    </section>
-    <section>
-      <item>
-        <attribute name="action">app.about</attribute>
-        <attribute name="label" translatable="yes">_About</attribute>
-      </item>
-      <item>
-        <attribute name="action">app.quit</attribute>
-        <attribute name="label" translatable="yes">_Quit</attribute>
-        <attribute name="accel">&lt;Primary&gt;q</attribute>
-    </item>
-    </section>
-  </menu>
-</interface>
-"""
+data_path = ""
 
 class AppWindow(Gtk.ApplicationWindow):
 
@@ -144,7 +101,8 @@ class Application(Gtk.Application):
         action.connect("activate", self.on_quit)
         self.add_action(action)
 
-        builder = Gtk.Builder.new_from_string(MENU_XML, -1)
+        builder = Gtk.Builder.new_from_file(
+            os.path.join(data_path, "sound_effects_editor.ui"))
         self.set_app_menu(builder.get_object("app-menu"))
 
     def do_activate(self):
@@ -173,24 +131,55 @@ class Application(Gtk.Application):
     def on_quit(self, action, param):
         self.quit()
 
+# Dictionary which holds the sounds, indexed by sound name.
+# The data for an entry is a dictionary of four items: the name of the sound,
+# the name of the file which contains the sound, a reference to the parsed
+# ElementTree which specifies the sound, and a dirty flag which is True if
+# the sound has been modified and so its file needs to be written.
+the_sounds = dict ()
+
+# Dictionary which holds the sound sequence.  Each sequence item
+# is indexed by its name.  The data for an entry is a dictionary of four
+# items: the name of the sequence item, the name of the file which
+# contains the sequence item, a reference to the parsed ElementTree which
+# specifies the sequence item, and a dirty flag which is True if the
+# sequence item has been modified and so its file needs to be written.
+the_sound_sequence = dict ()
+
+# Dictionary which holds the files processed.  Each file is indexed by
+# its name.  The data for an entry is a dictionary of three items:
+# the name of the file, a reference to the parsed ElementTree which
+# describes its contents, and a dirty flag which is True if the file
+# has been modified and so it needs to be written.
+the_files = dict ()
+
 # Subroutine to parse a ShowControl sounds description.
 def parse_sounds (sounds_path, sounds_child, xml_parser):
+    global the_sounds
     for sound in sounds_child.iter ("sound"):
         name = sound.find ("name")
-        print ("Sound name: " + name.text)
+        the_sounds [name.text] = dict (name=name.text,
+                                       file_name=sounds_path,
+                                       etree=sound,
+                                       dirty=False)
     return
 
 # Subroutine to parse a ShowControl sound sequence description.
 def parse_sound_sequence (sound_sequence_path, sound_sequence_child,
                           xml_parser):
+    global the_sound_sequence
     for sound_sequence_item in sound_sequence_child.iter ("sequence_item"):
         name = sound_sequence_item.find ("name")
-        print ("Sound sequence item name: " + name.text)
+        the_sound_sequence [name.text] = dict (name=name.text,
+                                               file_name=sound_sequence_path,
+                                               etree=sound_sequence_item,
+                                               dirty=False)
     return
 
 # Subroutine to parse a ShowControl equipment description.
 # We extract the sound effects.
 def parse_equipment (equipment_path, equipment_child, xml_parser):
+    global the_files
     # Go through the programs, picking out the sound_effects program.
     for program in equipment_child.iter ("program"):
         if (program.get ("id") == "sound_effects"):
@@ -210,6 +199,10 @@ def parse_equipment (equipment_path, equipment_child, xml_parser):
                     except OSError as err:
                         print (str(err))
                         return
+                    # Remember the sounds file.
+                    the_files [sounds_path] = dict (name=sounds_path,
+                                                    etree=sounds_tree,
+                                                    dirty=False)
                     # Validate the sounds file.
                     sounds_root = sounds_tree.getroot()
                     if (sounds_root.tag != "show_control"):
@@ -248,6 +241,11 @@ def parse_equipment (equipment_path, equipment_child, xml_parser):
                     except OSError as err:
                         print (str(err))
                         return
+                    # Remember the sound sequence file.
+                    the_files [sound_sequence_path] = dict (
+                        name=sound_sequence_path,
+                        etree=sound_sequence_tree,
+                        dirty=False)
                     # Validate the sound sequence file.
                     sound_sequence_root = sound_sequence_tree.getroot()
                     if (sound_sequence_root.tag != "show_control"):
@@ -291,6 +289,11 @@ def parse_project (project_path, project_child, xml_parser):
             except OSError as err:
                 print (str(err))
                 return
+            # Remember the equipment file.
+            the_files [equipment_path] = dict (name=equipment_path,
+                                               etree=equipment_tree,
+                                               dirty=False)
+
             # Validate the equipment file.
             equipment_root = equipment_tree.getroot()
             if (equipment_root.tag != "show_control"):
@@ -331,7 +334,7 @@ if __name__ == "__main__":
     cl_parser.add_argument ('input_file', nargs='?',
                             help='the ShowControl project file')
     cl_parser.add_argument ('--version', action='version',
-                            version='sound_effects_editor 0.1 2017-12-24',
+                            version='sound_effects_editor 0.1 2017-12-26',
                             help='print the version number and exit')
     arguments = cl_parser.parse_args ()
     arguments = vars(arguments)
@@ -404,6 +407,10 @@ if __name__ == "__main__":
         project_tree = etree.parse (project_path, xml_parser)
     except OSError as err:
         print (str(err))
+    # Remember the project file.
+    the_files [project_path] = dict (name=project_path,
+                                     etree=project_tree,
+                                     dirty=False)
     # Validate the project file.
     project_root = project_tree.getroot()
     if (project_root.tag != "show_control"):
@@ -424,6 +431,18 @@ if __name__ == "__main__":
     # Parse the project.
     parse_project (project_path, child, xml_parser)
 
+    # Print what we have remembered.
+    #    pprint.pprint (the_files)
+    #    pprint.pprint (the_sounds)
+    #    pprint.pprint (the_sound_sequence)
+
+    # Get the path to the program, so we can find the auxiliary files.
+    # We should use the configuration symbol pkgdatadir, but I haven't
+    # found a way to access that.
+    program_path = os.path.abspath (__file__)
+    data_path = os.path.join(os.path.dirname(os.path.dirname(program_path)),
+                             "share", os.path.basename(program_path),
+                             "ui")
     # Run the application.
     app = Application()
     app.run(sys.argv)

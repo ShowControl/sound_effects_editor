@@ -20,7 +20,6 @@ AM_PATH_PYTHON([3])
 
 # Checks for system services.
 
-
 AC_CONFIG_FILES([Makefile
                  example_01/Makefile
                  man/Makefile
