@@ -584,7 +584,7 @@ PACKAGE_STRING='sound_effects_editor 0.1'
 PACKAGE_BUGREPORT='John_Sauter@systemeyescomputerstore.com'
 PACKAGE_URL=''
 
-ac_unique_file="src/sound_effects_editor"
+ac_unique_file="src/sound_effects_editor.in"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 pkgpyexecdir

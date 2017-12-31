@@ -235,7 +235,8 @@ top_srcdir = @top_srcdir@
 dist_bin_SCRIPTS = sound_effects_editor
 uidir = $(pkgdatadir)/ui
 ui_DATA = sound_effects_editor.ui
-EXTRA_DIST = $(ui_DATA)
+EXTRA_DIST = $(ui_DATA) sound_effects_editor.in
+DISTCLEANFILES = sound_effects_editor
 all: all-am
 
 .SUFFIXES:
@@ -394,6 +395,7 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -481,6 +483,10 @@ uninstall-am: uninstall-dist_binSCRIPTS uninstall-uiDATA
 
 .PRECIOUS: Makefile
 
+
+# Make sure the program knows where to find its files.
+sound_effects_editor : sound_effects_editor.in
+	sed -e 's%@pkgdatadir@%$(pkgdatadir)%g' $^ > $@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

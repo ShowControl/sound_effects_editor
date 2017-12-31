@@ -4,7 +4,7 @@
 AC_PREREQ([2.67])
 AC_INIT([sound_effects_editor],[0.1],[John_Sauter@systemeyescomputerstore.com])
 AM_INIT_AUTOMAKE([tar-pax dist-bzip2 no-dist-gzip]) 
-AC_CONFIG_SRCDIR([src/sound_effects_editor])
+AC_CONFIG_SRCDIR([src/sound_effects_editor.in])
 AM_MAINTAINER_MODE
 
 # Checks for programs.

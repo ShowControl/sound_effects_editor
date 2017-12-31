@@ -1,3 +1,6 @@
+2017-12-31	Read the .ui file instead of embedding it.  This requires
+		learning how to read data files from the distribution kit.
+		
 2017-12-24	Add an example.
 
 2017-12-18	Start with the sample GTK program for Python.  Add code
