@@ -4,7 +4,7 @@
 # sound_effects_editor is a program to edit the sound effects played by
 # sound_effects_player.
 
-#   Copyright © 2017 by John Sauter
+#   Copyright © 2018 by John Sauter
 #                      <John_Sauter@systemeyescomputerstore.com>
 
 #   This program is free software: you can redistribute it and/or
@@ -39,8 +39,104 @@ from lxml import etree
 import argparse
 import pprint
 from io import StringIO, BytesIO
+
+# The path to the data files, specified at configure time
 data_path = ""
 
+# The lists of sequence items and sounds for the GUI
+sequence_list = Gtk.ListStore(str)
+sounds_list = Gtk.ListStore(str)
+
+# The views used by the GUI
+sequence_view = Gtk.TreeView(sequence_list)
+sequence_renderer = Gtk.CellRendererText()
+sequence_column = Gtk.TreeViewColumn("sequence item name",
+                                     sequence_renderer, text=0)
+sequence_view.append_column(sequence_column)
+sounds_view = Gtk.TreeView(sounds_list)
+sounds_renderer = Gtk.CellRendererText()
+sounds_column = Gtk.TreeViewColumn("sound name",
+                                   sounds_renderer, text=0)
+sounds_view.append_column(sounds_column)
+
+class soundsWindow(Gtk.ApplicationWindow):
+
+    def __init__(self, app):
+        global sounds_view
+        Gtk.Window.__init__(self, title="sounds", application=app)
+        self.set_default_size(250, 250)
+
+        # The scrolled window to list the sounds:
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_border_width(10)
+        scrolled_window.set_hexpand(True)
+        scrolled_window.set_vexpand(True)
+
+        # Attach the view to the scrolled window.
+        scrolled_window.add(sounds_view)
+        
+        # When a row is selected, it emits a signal.
+        sounds_view.get_selection().connect("changed", self.on_changed)
+
+        # The label we use to show the selection:
+        self.label = Gtk.Label()
+        self.label.set_text("")
+
+        # A grid to attach the widgets:
+        grid = Gtk.Grid()
+        grid.attach(scrolled_window, 0, 0, 1, 1)
+        grid.attach(self.label, 0, 1, 1, 1)
+
+        # Attach the grid to the window.
+        self.add(grid)
+
+    def on_changed(self, selection):
+        # Get the model and the iterator that points to the data in the model.
+        (model, iter) = selection.get_selected()
+        # Set the label to a new value depending on the selection.
+        self.label.set_text ("\n %s" %
+                             (model[iter][0]))
+        return True
+
+class sequenceWindow(Gtk.ApplicationWindow):
+
+    def __init__(self, app):
+        global sequence_view
+        Gtk.Window.__init__(self, title="sound sequence", application=app)
+        self.set_default_size(250, 250)
+
+        # The scrolled window to list the sequence items:
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_border_width(10)
+        scrolled_window.set_hexpand(True)
+        scrolled_window.set_vexpand(True)
+
+        # Attach the view to the scrolled window.
+        scrolled_window.add(sequence_view)
+        
+        # When a row is selected, it emits a signal.
+        sequence_view.get_selection().connect("changed", self.on_changed)
+
+        # The label we use to show the selection:
+        self.label = Gtk.Label()
+        self.label.set_text("")
+
+        # A grid to attach the widgets:
+        grid = Gtk.Grid()
+        grid.attach(scrolled_window, 0, 0, 1, 1)
+        grid.attach(self.label, 0, 1, 1, 1)
+
+        # Attach the grid to the window.
+        self.add(grid)
+        
+    def on_changed(self, selection):
+        # Get the model and the iterator that points to the data in the model.
+        (model, iter) = selection.get_selected()
+        # Set the label to a new value depending on the selection.
+        self.label.set_text ("\n %s" %
+                             (model[iter][0]))
+        return True
+        
 class AppWindow(Gtk.ApplicationWindow):
 
     def __init__(self, *args, **kwargs):
@@ -81,16 +177,11 @@ class AppWindow(Gtk.ApplicationWindow):
 
 class Application(Gtk.Application):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, application_id="org.example.myapp",
-                         flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
-                         **kwargs)
-        self.window = None
-
-        self.add_main_option("test", ord("t"), GLib.OptionFlags.NONE,
-                             GLib.OptionArg.NONE, "Command line test", None)
+    def __init__(self):
+        Gtk.Application.__init__(self)
 
     def do_startup(self):
+        global data_path
         Gtk.Application.do_startup(self)
 
         action = Gio.SimpleAction.new("about", None)
@@ -106,24 +197,13 @@ class Application(Gtk.Application):
         self.set_app_menu(builder.get_object("app-menu"))
 
     def do_activate(self):
-        # We only allow a single window and raise any existing ones
-        if not self.window:
-            # Windows are associated with the application
-            # when the last one is closed the application shuts down
-            self.window = AppWindow(application=self, title="Main Window")
-
+        self.window = AppWindow(application=self, title="Sound Effects Editor")
         self.window.present()
-
-    def do_command_line(self, command_line):
-        options = command_line.get_options_dict()
-
-        if options.contains("test"):
-            # This is printed on the main instance
-            print("Test argument recieved")
-
-        self.activate()
-        return 0
-
+        win = soundsWindow(self)
+        win.show_all()
+        win = sequenceWindow(self)
+        win.show_all()
+        
     def on_about(self, action, param):
         about_dialog = Gtk.AboutDialog(transient_for=self.window, modal=True)
         about_dialog.present()
@@ -156,24 +236,28 @@ the_files = dict ()
 # Subroutine to parse a ShowControl sounds description.
 def parse_sounds (sounds_path, sounds_child, xml_parser):
     global the_sounds
+    global sounds_list
     for sound in sounds_child.iter ("sound"):
         name = sound.find ("name")
         the_sounds [name.text] = dict (name=name.text,
                                        file_name=sounds_path,
                                        etree=sound,
                                        dirty=False)
+        sounds_list.append([name.text])
     return
 
 # Subroutine to parse a ShowControl sound sequence description.
 def parse_sound_sequence (sound_sequence_path, sound_sequence_child,
                           xml_parser):
     global the_sound_sequence
+    global sequence_list
     for sound_sequence_item in sound_sequence_child.iter ("sequence_item"):
         name = sound_sequence_item.find ("name")
         the_sound_sequence [name.text] = dict (name=name.text,
                                                file_name=sound_sequence_path,
                                                etree=sound_sequence_item,
                                                dirty=False)
+        sequence_list.append([name.text])
     return
 
 # Subroutine to parse a ShowControl equipment description.
@@ -322,7 +406,7 @@ if __name__ == "__main__":
     cl_parser = argparse.ArgumentParser (
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='Edit sound effects for sound_effects_player',
-    epilog='Copyright © 2017 by John Sauter' + '\n' +
+    epilog='Copyright © 2018 by John Sauter' + '\n' +
         'License GPL3+: GNU GPL version 3 or later; ' + '\n' +
         'see <http://gnu.org/licenses/gpl.html> for the full text' +
         ' of the license.' + '\n' +
@@ -334,7 +418,7 @@ if __name__ == "__main__":
     cl_parser.add_argument ('input_file', nargs='?',
                             help='the ShowControl project file')
     cl_parser.add_argument ('--version', action='version',
-                            version='sound_effects_editor 0.1 2017-12-31',
+                            version='sound_effects_editor 0.1 2018-01-20',
                             help='print the version number and exit')
     arguments = cl_parser.parse_args ()
     arguments = vars(arguments)
@@ -438,6 +522,8 @@ if __name__ == "__main__":
 
     # The Makefile places the configured data path in the following line:
     data_path = "@pkgdatadir@"
+    
     # Run the application.
     app = Application()
-    app.run(sys.argv)
+    exit_status = app.run(sys.argv)
+    sys.exit(exit_status)
